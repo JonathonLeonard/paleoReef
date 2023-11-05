@@ -1,6 +1,6 @@
 # Abiotic controls on warm-water carbonates through geological times
 
-Series of workflows used to evaluating global carbonate distribution and accumulation over the past 265 Myr accounting for changes in paleogeography, plate tectonics, and paleo-climatic conditions. 
+Series of workflows used to evaluate global carbonate distribution and accumulation over the past 265 Myr accounting for changes in paleogeography, plate tectonics, and paleo-climatic conditions. 
 
 This is done using a specific carbonate factory, the _photozoan-T factory_, that encompasses both tropical carbonate shelves and detached rimmed platforms and is composed of most of the highest carbonate producers including corals, stromatoporoids, green algae, rudists, and photosymbiotic foraminifers ([more info about the factory](https://www.nature.com/articles/s41598-019-52821-2)).
 
