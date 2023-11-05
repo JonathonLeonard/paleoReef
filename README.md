@@ -1,5 +1,7 @@
 # Abiotic controls on warm-water carbonates through geological times
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10073628.svg)](https://doi.org/10.5281/zenodo.10073628)
+
 Series of workflows used to evaluate global carbonate distribution and accumulation over the past 265 Myr accounting for changes in paleogeography, plate tectonics, and paleo-climatic conditions. 
 
 This is done using a specific carbonate factory, the _photozoan-T factory_, that encompasses both tropical carbonate shelves and detached rimmed platforms and is composed of most of the highest carbonate producers including corals, stromatoporoids, green algae, rudists, and photosymbiotic foraminifers ([more info about the factory](https://www.nature.com/articles/s41598-019-52821-2)).
@@ -12,3 +14,5 @@ The workflows, presented in the repository in the form of Jupyter Notebooks, des
 
 The approach relies on _(1)_ paleo-environmental ocean variables from the HadCM3 ([BRIDGE](https://www.paleo.bristol.ac.uk)) coupled atmosphere-ocean-vegetation Hadley Centre climate models, _(2)_ the observed modern photozoan-T factory defined after [Michel et al.](https://www.researchgate.net/profile/Julien-Michel-5/publication/333885781_Marine_carbonate_factories_a_global_model_of_carbonate_platform_distribution/links/5d3b098e299bf1995b4cd0ad/Marine-carbonate-factories-a-global-model-of-carbonate-platform-distribution.pdf), _(3)_ the updated continental margins and paleocoastlines dataset available on [Zenodo](https://doi.org/10.5281/zenodo.3903163) based on the paleogeography maps from the [PALEOMAP](https://zenodo.org/records/5460860) project, and _(4)_ sediment flux derived from global scale landscape evolution model for the Phanerozoic [HydroShare](www.hydroshare.org/resource/0106c156507c4861b4cfd404022f9580). In addition, sensitivity tests are making use of the fossil records from the Paleo Reefs PARED [database](https://www.paleo-reefs.pal.uni-erlangen.de). 
 
+
+**Environmental variables used for BIOMOD2 SDM and associated ensemble results for both CO2 scenarios are available from [Zenodo](https://zenodo.org/records/10073628)**.
