@@ -1,0 +1,12 @@
+Input DEM	-2393.54
+Plasim Orography	392.35
+Genie Bathymetry	-3626.58
+Wind DJF	4.67
+Surface Temp	20.45
+Precipitation	2.91
+Evaporation	2.9
+Wind JJA	5.24
+SST	24.1
+Current Surface	0.02
+Salinity	34.81
+Upwelling	0.0

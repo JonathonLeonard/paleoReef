@@ -1,2 +1,15 @@
-
 .DS_Store
+
+# Local test stuff
+biomod2-tutorial-material-jono/
+biomod2-tutorial-material-master.zip
+jonoTestCode/
+paleoReef-main.zip
+paleoReef-main/
+
+# Big files
+*.nc
+*.png
+*.jpg
+*.tif
+*.csv
