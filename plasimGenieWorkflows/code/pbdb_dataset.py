@@ -1,11 +1,13 @@
 import numpy as np
+import os
 import pandas as pd
-from code import paleoRotator
+from localCode import paleoRotator
 
-class PBDBDataset:
+class PBDBDataset_fromWebsite:
     def __init__(self, csv_path):
         """
-        Initializes the PBDBDataset with the path to the dataset.
+        Initializes the PBDBDataset in the format downloaded from the PBDB website.
+        This is not used but kept for reference.
 
         :param data_path: Path to the PBDB dataset CSV file.
         """
@@ -26,9 +28,9 @@ class PBDBDataset:
         self.df['mid'] = round(((self.df['max_ma'] + self.df['min_ma']) / 2), 2)
         col = self.df.pop('mid')
         self.df.insert(0, 'mid', col)    
-        self.df['rnd10'] = self.df['mid'].round(-1)
+        self.df['rnd10'] = (self.df['mid'] + 5) // 10 * 10
         # remove rows with duplicate lat/lng/age pairs
-        self.df.drop_duplicates(subset=['lat', 'lng', 'rnd10'], inplace=True)
+        self.df.drop_duplicates(subset=['lat', 'lng', 'mid'], inplace=True)
         # remove rows with missing lat/lng pairs
         self.df.dropna(subset=['lat', 'lng'], inplace=True)
         self.df = self.df.rename(columns={'lng':'longit', 'lat':'latit', 'paleomodel':'pmodel', 'paleolng':'plong',
@@ -45,7 +47,48 @@ class PBDBDataset:
         df['longit'] = df['longit'].round(2)
         df['latit'] = df['latit'].round(2)
         return df.rename(columns={'longit':'lon', 'latit':'lat', 'mid':'age', 'rnd10':'age10', 'min_ma':'minAge', 'max_ma':'maxAge', 'occurrence_no':'name'})
-    
+
+class PBDB_dataset:
+    """
+    For the pbdb dataset from Danijela
+    """
+    def __init__(self, csv_path):
+        self.csv_path = csv_path
+        self.df = self.load_and_clean()
+    def load_and_clean(self):
+        """
+        Loads the PBDB dataset from the CSV file and performs basic cleaning.
+        """
+        self.df = pd.read_csv(self.csv_path, index_col=0)
+        # self.df = self.df[['occurrence_no', 'max_ma', 'min_ma', 'lng', 'lat']]
+        # self.df['mid'] = round(((self.df['max_ma'] + self.df['min_ma']) / 2), 2)
+        # col = self.df.pop('mid')
+        # self.df.insert(0, 'mid', col)  
+        # Print number of unique occurrence_no before filtering and cleaning
+        print(f"PBDB data: Number of unique occurrence_no before filtering and cleaning: {self.df['occurrence_no'].nunique()}")  
+
+        # Only retain zooxanthellate corals
+        self.df = self.df[self.df['ECOLOGY'] == 'z']
+        print(f"Number of unique occurrence_no after selecting only zooxanthellate corals: {self.df['occurrence_no'].nunique()}")
+        self.df = self.df[self.df['site'] == 'reef']
+        print(f"Number of unique occurrence_no after selecting only reef and zooxanthellate sites: {self.df['occurrence_no'].nunique()}")
+
+        self.df['rnd10'] = (self.df['mid'] + 5) // 10 * 10
+        # remove rows with duplicate lat/lng/age pairs
+        self.df.drop_duplicates(subset=['lat', 'lng', 'mid'], inplace=True)
+        print(f"Number of unique occurrence_no after removing duplicates: {self.df['occurrence_no'].nunique()}")
+        # remove rows with missing lat/lng pairs
+        self.df.dropna(subset=['lat', 'lng'], inplace=True)
+        print(f"Number of unique occurrence_no after removing missing lat/lng: {self.df['occurrence_no'].nunique()}")
+        self.df = self.df.rename(columns={'lng':'longit', 'lat':'latit'})
+
+        return self.df.reset_index(drop=True)
+    def basic_df(self):
+        df = self.df[['longit', 'latit', 'mid', 'rnd10', 'min_ma', 'max_ma', 'occurrence_no']]
+        df['longit'] = df['longit'].round(2)
+        df['latit'] = df['latit'].round(2)
+        return df.rename(columns={'longit':'lon', 'latit':'lat', 'mid':'age', 'rnd10':'age10', 'min_ma':'minAge', 'max_ma':'maxAge', 'occurrence_no':'name'})
+
 class paredDataset:
     """
     Placeholder for the paleoreef dataset processing
@@ -61,17 +104,18 @@ class paredDataset:
 
     def load_and_clean(self):
         """
-        Loads the pared dataset from the CSV file and performs basic cleaning.
+        Loads the pared dataset from the CSV and performs basic cleaning.
         """
-        paredRaw = pd.read_csv(self.csv_path)
+        pared = pd.read_csv(self.csv_path)
+        print(f"Pared raw data: Number of unique r_number before filtering and cleaning: {pared['r_number'].nunique()}")
         # Do above for system y
-        pared = paredRaw[paredRaw['top'] <= 255] # Remove any data older than what we're interested in
         pared = pared[(pared['biota_main'] == 1) | (pared['biota_sec']==1)] # These are the biota associated with warm water reefs
+        print(f"Number of unique r_number after selecting warm water biota: {pared['r_number'].nunique()}")
         pared = pared.drop(['systemCol', 'seriesCol','col'], axis=1) # Drop some random unnedded columns
-        # remove rows where 'system.x' = 'Permian'
+        pared = pared[pared['top'] <= 255] # Remove any data older than what we're interested in
         pared = pared[pared['system.x'] != 'Permian'].reset_index(drop=True) # Remove any data older than what we're interested in
-
-        pared['nearest10'] = pared['mid'].round(-1)
+        print(f"Number of unique r_number after filtering and cleaning: {pared['r_number'].nunique()}")
+        pared['nearest10'] = (pared['mid'] + 5) // 10 * 10
 
         self.df = pared
         return self.df.reset_index(drop=True)
@@ -98,7 +142,7 @@ class basicLocalityData:
         # convert to 0-360 lons
         self.df['lon'] = self.df['lon'].apply(lambda x: x + 360 if x < 0 else x)
         
-    def reconstruct_points(self, paleoRotatorObject, columnPrefix = '', anchor_plate_id=0):
+    def reconstruct_points(self, paleoRotatorObject, columnPrefix = '', anchor_plate_id=0, gpmlName=None):
         """
         Reconstructs the paleoreff points
         """
@@ -108,12 +152,15 @@ class basicLocalityData:
             self.df['lon'].values, 
             self.df['lat'].values, 
             maxAges=maxAges, 
-            minAges=minAges, 
+            # minAges=minAges, 
+            minAges=np.zeros_like(maxAges),  # Set minAges to 0 for all points
             names=self.df.index.values
         )
-        # gpml.write('test2.gpml')
+        if gpmlName is not None:
+            os.makedirs(os.path.dirname(gpmlName), exist_ok=True)
+            gpml.write(gpmlName)
         self.df[f'{columnPrefix}PlateID'] = [int(feature.get_reconstruction_plate_id()) for feature in gpml]
-        self.df[f'{columnPrefix}lats'], self.df[f'{columnPrefix}lons'] = paleoRotatorObject.rotatePoints(gpml, self.df['age'], anchor_plate_id=anchor_plate_id)
+        self.df[f'{columnPrefix}lats'], self.df[f'{columnPrefix}lons'] = paleoRotatorObject.rotatePoints(gpml, self.df['age10'], anchor_plate_id=anchor_plate_id)
         # print(self.df)
         # For some reason the rotation puts coords back into the -180 to 180 range, so we need to convert them back to 0-360
         self.df[f'{columnPrefix}lons'] = self.df[f'{columnPrefix}lons'].apply(lambda x: x + 360 if x < 0 else x)
@@ -133,33 +180,76 @@ class basicLocalityData:
             return None
         return selectedDF.reset_index(drop=True)
     
-    def selectPoints4Epochs(self, age):
+    def selectPoints4GeologicalAge(self, age, level='Epoch'):
         from pyrolite.util.time import Timescale
         ts = Timescale()
 
-        epochs = ts.Epochs.copy().reset_index(drop=True)
-        epochs['ageDiff'] = np.abs(epochs['MeanAge'] - age)
-        closestEpoch = epochs.loc[epochs['ageDiff'].idxmin()]
+        if level not in ts.levels:
+            raise ValueError(f"Level '{level}' is not a valid geological time level. Choose from {ts.levels}.")
 
-        # print(closestEpoch)
+        time = ts.data.loc[ts.data.Level == level, :].copy()
+ 
+        closestTime = time[(time['Start'] > age) & (time['End'] <= age)].copy().reset_index(drop=True)
 
-        selectedDF = self.df[(self.df['age'] < closestEpoch['Start']) & (self.df['age'] > closestEpoch['End'])]
+        # closestTime is a DataFrame with a single row, so extract the Start and End values as scalars
+        if closestTime.empty:
+            print(f"No geological interval found for age {age} at level '{level}'")
+            return None
+        start = closestTime.iloc[0]['Start']
+        end = closestTime.iloc[0]['End']
+
+        selectedDF = self.df[(self.df['age'] < start) & (self.df['age'] >= end)]
 
         if selectedDF.empty:
             print(f"No points found for age {age}")
             return None
         return selectedDF.reset_index(drop=True)
-    
-    def printClosestEpoch(self, age):
+
+    def selectPoints4MergedAges(self, age, mergedAgesDF):
+        closestTime = mergedAgesDF[(mergedAgesDF['Start'] > age) & (mergedAgesDF['End'] <= age)].copy().reset_index(drop=True)
+        if closestTime.empty:
+            print(f"No geological interval found for age {age}")
+            return None
+        start = closestTime.iloc[0]['Start']
+        end = closestTime.iloc[0]['End']
+        selectedDF = self.df[(self.df['age'] < start) & (self.df['age'] >= end)]
+        if selectedDF.empty:
+            print(f"No points found for age {age}")
+            return None
+        return selectedDF.reset_index(drop=True)
+
+    def printClosestGeologicalAge(self, age, level='Epoch'):
         from pyrolite.util.time import Timescale
         ts = Timescale()
 
-        epochs = ts.Epochs.copy().reset_index(drop=True)
-        epochs['ageDiff'] = np.abs(epochs['MeanAge'] - age)
-        closestEpoch = epochs.loc[epochs['ageDiff'].idxmin()]
+        if level not in ts.levels:
+            raise ValueError(f"Level '{level}' is not a valid geological time level. Choose from {ts.levels}.")
 
-        print(f"Closest epoch to {age} Ma is {closestEpoch['Name']} ({closestEpoch['Start']} - {closestEpoch['End']} Ma) with a difference of {closestEpoch['ageDiff']} Ma")
-        return closestEpoch
+        time = ts.data.loc[ts.data.Level == level, :].copy()
+
+        # epochs = ts[time].copy().reset_index(drop=True)
+        # time['ageDiff'] = np.abs(time['MeanAge'] - age)
+        # closestEpoch = time.loc[time['ageDiff'].idxmin()]
+        closestTime = time[(time['Start'] > age) & (time['End'] <= age)].copy().reset_index(drop=True)
+
+        return closestTime['Name'].values[0]
+    
+    def removeMidOceanpoints(self, continental_polygons_path, distanceThreshold=2):
+        """
+        Removes points that are not within a certain distance from a continent
+        """
+        import geopandas as gpd
+        from shapely.geometry import Point
+        continents = gpd.read_file(continental_polygons_path)
+        lons = self.df['lon'].values
+        lons = np.where(lons > 180, lons - 360, lons)  # Convert to -180 to 180 range
+        lats = self.df['lat'].values
+        points = [Point(lon, lat) for lon, lat in zip(lons, lats)]
+        points = gpd.GeoSeries(points)
+        # self.df['within_continent'] = points.within(continents.union_all())
+        self.df['distance_to_continent'] = points.distance(continents.union_all())
+        self.df = self.df[self.df['distance_to_continent'] < distanceThreshold].reset_index(drop=True)
+        return self.df
 
     @staticmethod
     def find_nearest_valid(ds, lon, lat, OGlon, OGlat, var, radius=5.6125):
@@ -185,10 +275,16 @@ class basicLocalityData:
             # choose the one closest to the original coordinates
             lons = min_dist_coords.longitude.values
             lons = np.abs(lons - OGlon)
-            nearest_lon = min_dist_coords.longitude.values[np.where(lons == lons.min())].item()
+            nearest_lon = min_dist_coords.longitude.values[np.where(lons == lons.min())[0][0]]
         else:
             nearest_lon = min_dist_coords.longitude.values.item()
-        nearest_lat = min_dist_coords.latitude.values.item()
+        if len(min_dist_coords.latitude) > 1:
+            # choose the one closest to the original coordinates
+            lats = min_dist_coords.latitude.values
+            lats = np.abs(lats - OGlat)
+            nearest_lat = min_dist_coords.latitude.values[np.where(lats == lats.min())[0][0]]
+        else:
+            nearest_lat = min_dist_coords.latitude.values.item()
         # Select the nearest valid value
         # print(nearest_lon, nearest_lat)
         nearest = valid_subset.sel(longitude=nearest_lon, latitude=nearest_lat, method='nearest')
